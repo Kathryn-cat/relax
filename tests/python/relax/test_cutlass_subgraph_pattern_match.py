@@ -1,15 +1,14 @@
+import numpy as np
 import tvm
+import tvm.relax.cutlass.pattern
+import tvm.script
 import tvm.testing
 from tvm import relax
-import tvm.script
-import numpy as np
 from tvm.script.ir_builder import IRBuilder
 from tvm.script.ir_builder import ir as I
 from tvm.script.ir_builder import relax as R
 from tvm.script.ir_builder import tir as T
 from tvm.tir import StringImm
-
-import tvm.relax.cutlass.pattern
 
 PKG_FILE = "/tmp/packaged.so"
 GLOBAL_SYMBOL = "HGEMM"
@@ -29,12 +28,9 @@ def construct_mod_gemm(m, n, k):
                         # "global_symbol": GLOBAL_SYMBOL,
                     }
                 )
-                A = T.arg("A", T.buffer_decl((m, k), A_TYPE)
-                          )  # pylint: disable=invalid-name
-                B = T.arg("B", T.buffer_decl((k, n), B_TYPE)
-                          )  # pylint: disable=invalid-name
-                C = T.arg("C", T.buffer_decl((m, n), C_TYPE)
-                          )  # pylint: disable=invalid-name
+                A = T.arg("A", T.buffer_decl((m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = T.arg("B", T.buffer_decl((k, n), B_TYPE))  # pylint: disable=invalid-name
+                C = T.arg("C", T.buffer_decl((m, n), C_TYPE))  # pylint: disable=invalid-name
                 with T.grid(m, n, k) as (l0, l1, l2):
                     with T.block("dense_row_row_row"):
                         vi, vj, vk = T.axis.remap("SSR", [l0, l1, l2])
@@ -42,17 +38,13 @@ def construct_mod_gemm(m, n, k):
                         T.writes(C[vi, vj])
                         with T.init():
                             T.buffer_store(C, T.cast(0.0, C_TYPE), [vi, vj])
-                        T.buffer_store(
-                            C, C[vi, vj] + A[vi, vk] * B[vk, vj], [vi, vj])
+                        T.buffer_store(C, C[vi, vj] + A[vi, vk] * B[vk, vj], [vi, vj])
             with R.function():
                 R.func_name("main")
-                A = R.arg("A", R.tensor((m, k), A_TYPE)
-                          )  # pylint: disable=invalid-name
-                B = R.arg("B", R.tensor((k, n), B_TYPE)
-                          )  # pylint: disable=invalid-name
+                A = R.arg("A", R.tensor((m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = R.arg("B", R.tensor((k, n), B_TYPE))  # pylint: disable=invalid-name
                 C = R.call_tir(
-                    frame.global_vars[GLOBAL_SYMBOL], args=[
-                        A, B], shape=(m, n), dtype=C_TYPE
+                    frame.global_vars[GLOBAL_SYMBOL], args=[A, B], shape=(m, n), dtype=C_TYPE
                 )
                 R.func_ret_value(C)
     mod = ib.get()
@@ -70,13 +62,10 @@ def construct_mod_gemm_bias_relu(m, n, k):
                         # "global_symbol": GLOBAL_SYMBOL,
                     }
                 )
-                A = T.arg("A", T.buffer_decl((m, k), A_TYPE)
-                          )  # pylint: disable=invalid-name
-                B = T.arg("B", T.buffer_decl((k, n), B_TYPE)
-                          )  # pylint: disable=invalid-name
+                A = T.arg("A", T.buffer_decl((m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = T.arg("B", T.buffer_decl((k, n), B_TYPE))  # pylint: disable=invalid-name
                 Bias = T.arg("Bias", T.buffer_decl((1, n), C_TYPE))
-                C = T.arg("C", T.buffer_decl((m, n), C_TYPE)
-                          )  # pylint: disable=invalid-name
+                C = T.arg("C", T.buffer_decl((m, n), C_TYPE))  # pylint: disable=invalid-name
                 D = T.alloc_buffer((m, n), C_TYPE)
                 E = T.alloc_buffer((m, n), C_TYPE)
                 with T.grid(m, n, k) as (l0, l1, l2):
@@ -86,8 +75,7 @@ def construct_mod_gemm_bias_relu(m, n, k):
                         T.writes(D[i, j])
                         with T.init():
                             T.buffer_store(D, T.cast(0.0, C_TYPE), [i, j])
-                        T.buffer_store(D, D[i, j] + A[i, vk]
-                                       * B[vk, j], [i, j])
+                        T.buffer_store(D, D[i, j] + A[i, vk] * B[vk, j], [i, j])
                 with T.grid(m, n) as (l0, l1):
                     with T.block("bias"):
                         i, j = T.axis.remap("SS", [l0, l1])
@@ -99,18 +87,14 @@ def construct_mod_gemm_bias_relu(m, n, k):
                         i, j = T.axis.remap("SS", [l0, l1])
                         T.reads(E[i, j])
                         T.writes(C[i, j])
-                        T.buffer_store(
-                            C, T.max(E[i, j], T.cast(0, "float16")), [i, j])
+                        T.buffer_store(C, T.max(E[i, j], T.cast(0, "float16")), [i, j])
             with R.function():
                 R.func_name("main")
-                A = R.arg("A", R.tensor((m, k), A_TYPE)
-                          )  # pylint: disable=invalid-name
-                B = R.arg("B", R.tensor((k, n), B_TYPE)
-                          )  # pylint: disable=invalid-name
+                A = R.arg("A", R.tensor((m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = R.arg("B", R.tensor((k, n), B_TYPE))  # pylint: disable=invalid-name
                 Bias = R.arg("Bias", R.tensor((n,), C_TYPE))
                 C = R.call_tir(
-                    frame.global_vars[GLOBAL_SYMBOL], args=[
-                        A, B, Bias], shape=(m, n), dtype=C_TYPE
+                    frame.global_vars[GLOBAL_SYMBOL], args=[A, B, Bias], shape=(m, n), dtype=C_TYPE
                 )
                 R.func_ret_value(C)
     mod = ib.get()
@@ -123,7 +107,7 @@ def gemm():
     mod = construct_mod_gemm(m=m, n=n, k=k)
 
     with tvm.transform.PassContext():
-        mod = relax.transform.SplitCutlass()(mod)
+        mod = relax.transform.DispatchCutlass()(mod)
         mod = relax.transform.RemoveUnusedFunctions()(mod)
         mod = relax.transform.CutlassCodegen()(mod)
         exe = relax.vm.build(mod, target=target)
@@ -150,7 +134,7 @@ def gemm_bias_relu():
     mod = construct_mod_gemm_bias_relu(m=m, n=n, k=k)
 
     with tvm.transform.PassContext():
-        mod = relax.transform.SplitCutlass()(mod)
+        mod = relax.transform.DispatchCutlass()(mod)
         mod = relax.transform.RemoveUnusedFunctions()(mod)
         mod = relax.transform.CutlassCodegen()(mod)
         executable = relax.vm.build(mod, target=target)

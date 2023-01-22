@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Relax Cutlass Integration."""
+"""Relax Cublas Integration."""
 
 from .pattern import *
-from .profiler import *

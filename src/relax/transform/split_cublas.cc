@@ -17,31 +17,26 @@
  * under the License.
  */
 /*!
- * \file src/relax/transform/split_cutlass.cc
- * \brief Dispatch graph-level tir to cutlass.
+ * \file src/relax/transform/split_cublas.cc
+ * \brief Dispatch graph-level tir to cublas.
  */
-#include "./pattern_matching.h"
 #include "./split_functions.h"
 
 namespace tvm {
 namespace relax {
 
 namespace transform {
-Pass DispatchCutlass() {
+Pass SplitCublas() {
   runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =  //
       [=](IRModule m, PassContext pc) {
-        // TODO: add pre- and post- transform function calls here
-        // in the pre-splitting stage, our first goal is to categorize the axes in the module
-        PreProcessModule(m);
-        IRModule split_mod = SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
-        return split_mod;
+        return SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cublas");
       };
-  return CreateModulePass(/*pass_function=*/pass_func,      //
-                          /*opt_level=*/0,                  //
-                          /*pass_name=*/"DispatchCutlass",  //
+  return CreateModulePass(/*pass_function=*/pass_func,  //
+                          /*opt_level=*/0,              //
+                          /*pass_name=*/"SplitCublas",  //
                           /*required=*/{});
 }
-TVM_REGISTER_GLOBAL("relax.transform.DispatchCutlass").set_body_typed(DispatchCutlass);
+TVM_REGISTER_GLOBAL("relax.transform.SplitCublas").set_body_typed(SplitCublas);
 
 }  // namespace transform
 

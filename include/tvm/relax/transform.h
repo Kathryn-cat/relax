@@ -187,7 +187,16 @@ TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
  *
  * \return The Pass.
  */
-TVM_DLL Pass SplitCutlass();
+TVM_DLL Pass DispatchCutlass();
+
+/*!
+ * \brief Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
+ *        matched with some cublas kernels, and the second part is the rest of the
+ *        original PrimFunc that is not fused with cublas kernels.
+ *
+ * \return The Pass.
+ */
+TVM_DLL Pass SplitCublas();
 
 /*!
  * \brief Inject the cutlass code into the PrimFunc that is matched with cutlass kernels.
@@ -195,6 +204,13 @@ TVM_DLL Pass SplitCutlass();
  * \return The Pass.
  */
 TVM_DLL Pass CutlassCodegen();
+
+/*!
+ * \brief Inject the cublas code into the PrimFunc that is matched with cublas kernels.
+ *
+ * \return The Pass.
+ */
+TVM_DLL Pass CublasCodegen();
 
 /*!
  * \brief Automatic mixed precision pass.
