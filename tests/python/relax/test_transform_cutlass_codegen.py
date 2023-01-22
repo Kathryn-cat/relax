@@ -16,16 +16,15 @@
 # under the License.
 
 from __future__ import annotations
+
 import tempfile
 
-from tvm import relax, runtime
-import tvm
-import tvm.testing
-from tvm import relax
 import numpy as np
-from tvm.relax.vm import build as relax_build
-
+import tvm
 import tvm.relax.cutlass.pattern
+import tvm.testing
+from tvm import relax, runtime
+from tvm.relax.vm import build as relax_build
 
 PKG_FILE = "/tmp/test_transform_cutlass_codegen.so"
 GLOBAL_SYMBOL = "HGEMM"
@@ -42,11 +41,17 @@ def f_run(rt_mod: runtime.Module, device: runtime.ndarray.Device, *input):
 
 
 def build(mod):
+    print("original module:")
+    mod.show()
     mod = relax.transform.SplitCutlass()(mod)
+    print("after SplitCutlass:")
+    mod.show()
     mod = relax.transform.CutlassCodegen()(mod)
-    executbale = relax_build(mod, target)
-    executbale.mod.export_library(PKG_FILE, cc="nvcc")
-    return executbale
+    print("after CutlassCodegen:")
+    mod.show()
+    executable = relax_build(mod, target)
+    executable.mod.export_library(PKG_FILE, cc="nvcc")
+    return executable
 
 
 def constructGEMM(m, n, k, GLOBAL_SYMBOL="HGEMM"):
@@ -471,9 +476,12 @@ def test_cutlass_batch_dense2_bias():
 
 if __name__ == "__main__":
     test_cutlass_dense()
+    print("passed test")
+    """
     test_cutlass_dense_bias()
     test_cutlass_dense_bias_relu()
     test_cutlass_batch_dense()
     test_cutlass_batch_dense2()
     test_cutlass_batch_dense_bias()
     test_cutlass_batch_dense2_bias()
+    """

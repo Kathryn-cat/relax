@@ -17,8 +17,8 @@
  * under the License.
  */
 /*!
- * \file src/relax/transform/split_cutlass.cc
- * \brief Dispatch graph-level tir to cutlass.
+ * \file src/relax/transform/split_cublas.cc
+ * \brief Dispatch graph-level tir to cublas.
  */
 #include "./split_functions.h"
 
@@ -26,17 +26,17 @@ namespace tvm {
 namespace relax {
 
 namespace transform {
-Pass SplitCutlass() {
+Pass SplitCublas() {
   runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =  //
       [=](IRModule m, PassContext pc) {
-        return SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
+        return SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cublas");
       };
-  return CreateModulePass(/*pass_function=*/pass_func,   //
-                          /*opt_level=*/0,               //
-                          /*pass_name=*/"SplitCutlass",  //
+  return CreateModulePass(/*pass_function=*/pass_func,  //
+                          /*opt_level=*/0,              //
+                          /*pass_name=*/"SplitCublas",  //
                           /*required=*/{});
 }
-TVM_REGISTER_GLOBAL("relax.transform.SplitCutlass").set_body_typed(SplitCutlass);
+TVM_REGISTER_GLOBAL("relax.transform.SplitCublas").set_body_typed(SplitCublas);
 
 }  // namespace transform
 
