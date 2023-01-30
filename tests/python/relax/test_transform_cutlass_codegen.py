@@ -49,9 +49,12 @@ def build(mod):
     mod = relax.transform.CutlassCodegen()(mod)
     print("after CutlassCodegen:")
     mod.show()
-    executable = relax_build(mod, target)
+    try:
+        executable = relax_build(mod, target)
+    except tvm._ffi.base.TVMError:
+        return False
     executable.mod.export_library(PKG_FILE, cc="nvcc")
-    return executable
+    return True
 
 
 # basic tests
@@ -97,7 +100,7 @@ def constructGEMM(m, n, k, GLOBAL_SYMBOL="HGEMM"):
 
 def test_cutlass_dense():
     m, n, k = 128, 128, 128
-    build(constructGEMM(m, n, k))
+    assert build(constructGEMM(m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(m, k).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
@@ -157,7 +160,7 @@ def constructGEMM_bias(m, n, k, GLOBAL_SYMBOL="HGEMM_bias"):
 
 def test_cutlass_dense_bias():
     m, n, k = 128, 128, 128
-    build(constructGEMM_bias(m, n, k))
+    assert build(constructGEMM_bias(m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(m, k).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
@@ -226,7 +229,7 @@ def constructGEMM_bias_relu(m, n, k, GLOBAL_SYMBOL="HGEMM"):
 
 def test_cutlass_dense_bias_relu():
     m, n, k = 128, 128, 128
-    build(constructGEMM_bias_relu(m, n, k))
+    assert build(constructGEMM_bias_relu(m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(m, k).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
@@ -279,7 +282,7 @@ def constructBatchGEMM(b, m, n, k, GLOBAL_SYMBOL="BatchHGEMM"):
 
 def test_cutlass_batch_dense():
     b, m, n, k = 2, 128, 128, 128
-    build(constructBatchGEMM(b, m, n, k))
+    assert build(constructBatchGEMM(b, m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(b, m, k).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
@@ -332,7 +335,7 @@ def constructBatchGEMM2(b, m, n, k, GLOBAL_SYMBOL="BatchHGEMM2"):
 
 def test_cutlass_batch_dense2():
     b, m, n, k = 2, 128, 128, 128
-    build(constructBatchGEMM2(b, m, n, k))
+    assert build(constructBatchGEMM2(b, m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(b, m, k).astype("float16") * 5
     B = np.random.rand(b, k, n).astype("float16") * 5
@@ -396,7 +399,7 @@ def constructBatchGEMM_bias(b, m, n, k, GLOBAL_SYMBOL="BatchHGEMM_bias"):
 
 def test_cutlass_batch_dense_bias():
     b, m, n, k = 2, 128, 128, 128
-    build(constructBatchGEMM_bias(b, m, n, k))
+    assert build(constructBatchGEMM_bias(b, m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(b, m, k).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
@@ -464,7 +467,7 @@ def constructBatchGEMM2_bias(b, m, n, k, GLOBAL_SYMBOL="BatchHGEMM2_bias"):
 
 def test_cutlass_batch_dense2_bias():
     b, m, n, k = 2, 128, 128, 128
-    build(constructBatchGEMM2_bias(b, m, n, k))
+    assert build(constructBatchGEMM2_bias(b, m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(b, m, k).astype("float16") * 5
     B = np.random.rand(b, k, n).astype("float16") * 5
@@ -531,7 +534,7 @@ def constructMultiBatchGEMM(b1, b2, m, n, k, GLOBAL_SYMBOL="MultiBatchHGEMM"):
 
 def test_cutlass_multi_batch_dense():
     b1, b2, m, n, k = 2, 3, 128, 128, 128
-    build(constructMultiBatchGEMM(b1, b2, m, n, k))
+    assert build(constructMultiBatchGEMM(b1, b2, m, n, k)), "build failure on CUDA"
     dev = tvm.cuda()
     A = np.random.rand(b1, b2, m, k).astype("float16") * 5
     B = np.random.rand(b1, b2, k, n).astype("float16") * 5
