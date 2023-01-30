@@ -785,6 +785,65 @@ def test_cutlass_trans_dense2():
     np.testing.assert_allclose(result.numpy(), A @ B.T, rtol=1e-2)
 
 
+# einsum "hij, hjk -> ik"
+def constructReductionGEMM(b, m, n, k, GLOBAL_SYMBOL="ReductionHGEMM"):
+    from tvm.script.ir_builder import IRBuilder
+    from tvm.script.ir_builder import ir as I
+    from tvm.script.ir_builder import relax as R
+    from tvm.script.ir_builder import tir as T
+
+    with IRBuilder() as ib:  # pylint: disable=invalid-name
+        with I.ir_module() as frame:
+            with T.prim_func():
+                T.func_name(GLOBAL_SYMBOL)
+                T.func_attr(
+                    {
+                        "global_symbol": GLOBAL_SYMBOL,
+                    }
+                )
+                A = T.arg("A", T.buffer_decl((b, m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = T.arg("B", T.buffer_decl((b, k, n), B_TYPE))  # pylint: disable=invalid-name
+                D = T.alloc_buffer((m, n), C_TYPE)
+                with T.grid(b, m, n, k) as (lb, l0, l1, l2):
+                    with T.block("reduction_dense_row_row_row"):
+                        vb, vi, vj, vk = T.axis.remap("RSSR", [lb, l0, l1, l2])
+                        T.reads(A[vb, vi, vk], B[vb, vk, vj])
+                        T.writes(D[vi, vj])
+                        with T.init():
+                            T.buffer_store(D, T.cast(0.0, C_TYPE), [vi, vj])
+                        T.buffer_store(
+                            D,
+                            D[vi, vj] + A[vb, vi, vk] * B[vb, vk, vj],
+                            [vi, vj],
+                        )
+            with R.function():
+                R.func_name("main")
+                A = R.arg("A", R.tensor((b, m, k), A_TYPE))  # pylint: disable=invalid-name
+                B = R.arg("B", R.tensor((b, k, n), B_TYPE))  # pylint: disable=invalid-name
+                C = R.call_tir(
+                    frame.global_vars[GLOBAL_SYMBOL],
+                    args=[A, B],
+                    shape=(m, n),
+                    dtype=C_TYPE,
+                )
+                R.func_ret_value(C)
+    mod = ib.get()
+    return mod
+
+
+def test_cutlass_reduction_dense():
+    b, m, n, k = 2, 128, 128, 128
+    assert build(constructReductionGEMM(b, m, n, k)), "build failure on CUDA"
+    dev = tvm.cuda()
+    A = np.random.rand(b, m, k).astype("float16") * 5
+    B = np.random.rand(b, k, n).astype("float16") * 5
+    A_tvm = tvm.nd.array(A, dev)
+    B_tvm = tvm.nd.array(B, dev)
+    executable = tvm.runtime.load_module(PKG_FILE)
+    result = f_run(executable, dev, A_tvm, B_tvm)
+    np.testing.assert_allclose(result.numpy(), np.einsum("hij, hjk->ik", A, B), rtol=1e-2)
+
+
 if __name__ == "__main__":
     # test_cutlass_dense()
     # test_cutlass_dense_bias()
@@ -797,5 +856,6 @@ if __name__ == "__main__":
     # test_cutlass_multi_batch_dense2()
     # test_cutlass_multi_batch_dense3()
     # test_cutlass_trans_dense()
-    test_cutlass_trans_dense2()
+    # test_cutlass_trans_dense2()
+    test_cutlass_reduction_dense()
     print("passed test")
