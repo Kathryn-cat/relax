@@ -1512,7 +1512,7 @@ if __name__ == "__main__":
     # test_cutlass_reduction_dense2()
     # test_cutlass_reduction_dense3()
     # test_cutlass_reduction_dense4()
-    test_cutlass_reduction_dense_bias()
+    # test_cutlass_reduction_dense_bias()
     # test_cutlass_permutation_dense()
     # test_cutlass_permutation_dense2()
     # test_cutlass_permutation_dense3()
