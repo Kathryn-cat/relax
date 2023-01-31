@@ -931,6 +931,76 @@ def test_cutlass_trans_dense2():
     np.testing.assert_allclose(result.numpy(), A @ B.T, rtol=1e-2)
 
 
+# einsum "ij, ik -> jk", with a bias of shape (1, k)
+def constructTransGEMM_bias(m, n, k, GLOBAL_SYMBOL="TransHGEMM_bias"):
+    from tvm.script.ir_builder import IRBuilder
+    from tvm.script.ir_builder import ir as I
+    from tvm.script.ir_builder import relax as R
+    from tvm.script.ir_builder import tir as T
+
+    with IRBuilder() as ib:  # pylint: disable=invalid-name
+        with I.ir_module() as frame:
+            with T.prim_func():
+                T.func_name(GLOBAL_SYMBOL)
+                T.func_attr(
+                    {
+                        "global_symbol": GLOBAL_SYMBOL,
+                    }
+                )
+                A = T.arg("A", T.buffer_decl((k, m), A_TYPE))  # pylint: disable=invalid-name
+                B = T.arg("B", T.buffer_decl((k, n), B_TYPE))  # pylint: disable=invalid-name
+                bias = T.arg("bias", T.buffer_decl((1, n), C_TYPE))
+                C = T.arg("C", T.buffer_decl((m, n), C_TYPE))
+                D = T.alloc_buffer((m, n), C_TYPE)
+                with T.grid(m, n, k) as (l0, l1, l2):
+                    with T.block("trans_dense_row_row_row"):
+                        vi, vj, vk = T.axis.remap("SSR", [l0, l1, l2])
+                        T.reads(A[vk, vi], B[vk, vj])
+                        T.writes(D[vi, vj])
+                        with T.init():
+                            T.buffer_store(D, T.cast(0.0, C_TYPE), [vi, vj])
+                        T.buffer_store(
+                            D,
+                            D[vi, vj] + A[vk, vi] * B[vk, vj],
+                            [vi, vj],
+                        )
+                with T.grid(m, n) as (l0, l1):
+                    with T.block("bias"):
+                        vi, vj = T.axis.remap("SS", [l0, l1])
+                        T.reads(D[vi, vj], bias[0, vj])
+                        T.writes(C[vi, vj])
+                        T.buffer_store(C, D[vi, vj] + bias[0, vj], [vi, vj])
+            with R.function():
+                R.func_name("main")
+                A = R.arg("A", R.tensor((k, m), A_TYPE))  # pylint: disable=invalid-name
+                B = R.arg("B", R.tensor((k, n), B_TYPE))  # pylint: disable=invalid-name
+                bias = R.arg("bias", R.tensor((1, n), C_TYPE))
+                C = R.call_tir(
+                    frame.global_vars[GLOBAL_SYMBOL],
+                    args=[A, B, bias],
+                    shape=(m, n),
+                    dtype=C_TYPE,
+                )
+                R.func_ret_value(C)
+    mod = ib.get()
+    return mod
+
+
+def test_cutlass_trans_dense_bias():
+    m, n, k = 128, 128, 128
+    assert build(constructTransGEMM_bias(m, n, k)), "build failure on CUDA"
+    dev = tvm.cuda()
+    A = np.random.rand(k, m).astype("float16") * 5
+    B = np.random.rand(k, n).astype("float16") * 5
+    bias = np.random.rand(1, n).astype("float16") * 5
+    A_tvm = tvm.nd.array(A, dev)
+    B_tvm = tvm.nd.array(B, dev)
+    bias_tvm = tvm.nd.array(bias, dev)
+    executable = tvm.runtime.load_module(PKG_FILE)
+    result = f_run(executable, dev, A_tvm, B_tvm, bias_tvm)
+    np.testing.assert_allclose(result.numpy(), A.T @ B + bias, rtol=1e-2)
+
+
 # einsum "hij, hjk -> ik"
 def constructReductionGEMM(b, m, n, k, GLOBAL_SYMBOL="ReductionHGEMM"):
     from tvm.script.ir_builder import IRBuilder
@@ -1364,9 +1434,10 @@ if __name__ == "__main__":
     # test_cutlass_multi_batch_dense2()
     # test_cutlass_multi_batch_dense3()
     # test_cutlass_multi_batch_dense_bias()
-    test_cutlass_multi_batch_dense2_bias()
+    # test_cutlass_multi_batch_dense2_bias()
     # test_cutlass_trans_dense()
     # test_cutlass_trans_dense2()
+    test_cutlass_trans_dense_bias()
     # test_cutlass_reduction_dense()
     # test_cutlass_reduction_dense2()
     # test_cutlass_reduction_dense3()
