@@ -36,7 +36,19 @@ namespace tir {
 // TODO: write the categorization code here
 // can make a new class, subclass of StmtExprVisitor/Mutator
 // for now, we only focus on the categorization part
-class PatternMatcher {};
+class PatternMatcher : public StmtExprVisitor {
+ public:
+  void Categorize(Stmt body) { std::cout << "categorize" << std::endl; }
+
+  // some public vars here, like loop categorization
+
+ private:
+  // helper function goes here
+
+  void VisitStmt_(const BlockNode* op) final {}
+
+  // some private vars here
+};
 
 }  // namespace tir
 
@@ -46,7 +58,15 @@ namespace relax {
 // function MergeLoops / ReorderLoops should be in class subscribing to ExprMutator
 // for now, to test categorization, use a dummy function
 
-void PreProcessModule(const tvm::IRModule& mod) { tir::PatternMatcher matcher; }
+void PreProcessModule(const tvm::IRModule& mod) {
+  tir::PatternMatcher matcher;
+  for (auto& kv : mod->functions) {
+    if (auto* func = kv.second.as<tir::PrimFuncNode>()) {
+      tir::Stmt body = func->body.as<tir::BlockRealizeNode>()->block->body;
+      matcher.Categorize(body);
+    }
+  }
+}
 
 }  // namespace relax
 }  // namespace tvm
