@@ -38,14 +38,22 @@ namespace tir {
 // for now, we only focus on the categorization part
 class PatternMatcher : public StmtExprVisitor {
  public:
-  void Categorize(Stmt body) { std::cout << "categorize" << std::endl; }
+  void Categorize(Stmt body) { this->VisitStmt(body); }
 
   // some public vars here, like loop categorization
 
  private:
   // helper function goes here
 
-  void VisitStmt_(const BlockNode* op) final {}
+  void VisitStmt_(const BlockNode* op) final {
+    // perhaps can categorize loop bindings based on the read / write pattern
+
+    if (op->reads.size() != 2 || op->writes.size() != 1) {
+      // only categorize and transform matmul patterns
+      // this check does not exclude bias
+      return;
+    }
+  }
 
   // some private vars here
 };
