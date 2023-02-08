@@ -20,6 +20,7 @@
  * \file src/relax/transform/split_cutlass.cc
  * \brief Dispatch graph-level tir to cutlass.
  */
+#include "./pattern_matching.h"
 #include "./split_functions.h"
 
 namespace tvm {
@@ -30,6 +31,7 @@ Pass DispatchCutlass() {
   runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =  //
       [=](IRModule m, PassContext pc) {
         // TODO: add pre- and post- transform function calls here
+        // in the pre-splitting stage, our first goal is to categorize the axes in the module
         IRModule split_mod = SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
         return split_mod;
       };
