@@ -365,7 +365,7 @@ def CutlassCodegen() -> tvm.ir.transform.Pass:
     return _ffi_api.CutlassCodegen()
 
 
-def SplitCutlass() -> tvm.ir.transform.Pass:
+def DispatchCutlass() -> tvm.ir.transform.Pass:
     """Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
        matched with some cutlass kernels, and the second part is the rest of the original
        PrimFunc that is not fused with cutlass kernels.
@@ -375,7 +375,7 @@ def SplitCutlass() -> tvm.ir.transform.Pass:
     ret : tvm.transform.Pass
         The registered pass for cutlass codegen.
     """
-    return _ffi_api.SplitCutlass()
+    return _ffi_api.DispatchCutlass()
 
 
 def CublasCodegen() -> tvm.ir.transform.Pass:

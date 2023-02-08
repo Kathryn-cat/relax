@@ -26,17 +26,19 @@ namespace tvm {
 namespace relax {
 
 namespace transform {
-Pass SplitCutlass() {
+Pass DispatchCutlass() {
   runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =  //
       [=](IRModule m, PassContext pc) {
-        return SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
+        // TODO: add pre- and post- transform function calls here
+        IRModule split_mod = SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
+        return split_mod;
       };
-  return CreateModulePass(/*pass_function=*/pass_func,   //
-                          /*opt_level=*/0,               //
-                          /*pass_name=*/"SplitCutlass",  //
+  return CreateModulePass(/*pass_function=*/pass_func,      //
+                          /*opt_level=*/0,                  //
+                          /*pass_name=*/"DispatchCutlass",  //
                           /*required=*/{});
 }
-TVM_REGISTER_GLOBAL("relax.transform.SplitCutlass").set_body_typed(SplitCutlass);
+TVM_REGISTER_GLOBAL("relax.transform.DispatchCutlass").set_body_typed(DispatchCutlass);
 
 }  // namespace transform
 

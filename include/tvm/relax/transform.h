@@ -187,7 +187,7 @@ TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
  *
  * \return The Pass.
  */
-TVM_DLL Pass SplitCutlass();
+TVM_DLL Pass DispatchCutlass();
 
 /*!
  * \brief Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is

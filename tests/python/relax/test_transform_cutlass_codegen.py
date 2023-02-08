@@ -43,8 +43,8 @@ def f_run(rt_mod: runtime.Module, device: runtime.ndarray.Device, *input):
 def build(mod):
     print("original module:")
     mod.show()
-    mod = relax.transform.SplitCutlass()(mod)
-    print("after SplitCutlass:")
+    mod = relax.transform.DispatchCutlass()(mod)
+    print("after DispatchCutlass:")
     mod.show()
     mod = relax.transform.CutlassCodegen()(mod)
     print("after CutlassCodegen:")
