@@ -29,3 +29,24 @@
 #include <tvm/tir/builtin.h>
 #include <tvm/tir/op.h>
 #include <tvm/tir/stmt_functor.h>
+
+namespace tvm {
+namespace tir {
+
+// TODO: write the categorization code here
+// can make a new class, subclass of StmtExprVisitor/Mutator
+// for now, we only focus on the categorization part
+class PatternMatcher {};
+
+}  // namespace tir
+
+namespace relax {
+
+// TODO: write the function to be called in pass
+// function MergeLoops / ReorderLoops should be in class subscribing to ExprMutator
+// for now, to test categorization, use a dummy function
+
+void PreProcessModule(const tvm::IRModule& mod) { tir::PatternMatcher matcher; }
+
+}  // namespace relax
+}  // namespace tvm

@@ -32,6 +32,7 @@ Pass DispatchCutlass() {
       [=](IRModule m, PassContext pc) {
         // TODO: add pre- and post- transform function calls here
         // in the pre-splitting stage, our first goal is to categorize the axes in the module
+        PreProcessModule(m);
         IRModule split_mod = SplitMutator::Transform(/*mod=*/m, /*vendor_type=*/"cutlass");
         return split_mod;
       };
