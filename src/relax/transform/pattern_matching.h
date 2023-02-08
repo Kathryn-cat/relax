@@ -41,6 +41,10 @@ class PatternMatcher : public StmtExprVisitor {
   void Categorize(Stmt body) { this->VisitStmt(body); }
 
   // some public vars here, like loop categorization
+  // temporarily this is a set, but will change into hash values of 0, 1 later
+  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> first_mat;
+  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> second_mat;
+  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> result_mat;
 
  private:
   // helper function goes here
@@ -53,6 +57,9 @@ class PatternMatcher : public StmtExprVisitor {
       // this check does not exclude bias
       return;
     }
+    first_mat.insert(op->reads[0]->buffer);
+    second_mat.insert(op->reads[1]->buffer);
+    result_mat.insert(op->writes[0]->buffer);
   }
 
   // some private vars here

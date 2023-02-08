@@ -1493,9 +1493,9 @@ def test_cutlass_permutation_dense3():
 
 
 if __name__ == "__main__":
-    test_cutlass_dense()
+    # test_cutlass_dense()
     # test_cutlass_dense_bias()
-    # test_cutlass_dense_bias_relu()
+    test_cutlass_dense_bias_relu()
     # test_cutlass_batch_dense()
     # test_cutlass_batch_dense2()
     # test_cutlass_batch_dense_bias()
