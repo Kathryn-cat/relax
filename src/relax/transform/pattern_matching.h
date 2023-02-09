@@ -42,9 +42,7 @@ class PatternMatcher : public StmtExprVisitor {
 
   // some public vars here, like loop categorization
   // temporarily this is a set, but will change into hash values of 0, 1 later
-  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> first_mat;
-  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> second_mat;
-  std::unordered_set<Buffer, ObjectPtrHash, ObjectPtrEqual> result_mat;
+  std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> index_vars;
 
  private:
   // helper function goes here
@@ -65,7 +63,24 @@ class PatternMatcher : public StmtExprVisitor {
       const VarNode* index_ptr = range->min.as<VarNode>();
       ICHECK(index_ptr != nullptr);
       const Var index_var = GetRef<Var>(index_ptr);
-      // TODO: the next step is to check two PrimExpr are equal
+      index_vars.insert(index_var);
+      std::cout << "inserted var to set" << std::endl;
+    }
+    for (const Range range : region_B->region) {
+      // the indices of region, might contain 2,3, or many
+      const VarNode* index_ptr = range->min.as<VarNode>();
+      ICHECK(index_ptr != nullptr);
+      const Var index_var = GetRef<Var>(index_ptr);
+      index_vars.insert(index_var);
+      std::cout << "inserted var to set" << std::endl;
+    }
+    for (const Range range : region_C->region) {
+      // the indices of region, might contain 2,3, or many
+      const VarNode* index_ptr = range->min.as<VarNode>();
+      ICHECK(index_ptr != nullptr);
+      const Var index_var = GetRef<Var>(index_ptr);
+      index_vars.insert(index_var);
+      std::cout << "inserted var to set" << std::endl;
     }
   }
 
@@ -86,6 +101,7 @@ void PreProcessModule(const tvm::IRModule& mod) {
     if (auto* func = kv.second.as<tir::PrimFuncNode>()) {
       tir::Stmt body = func->body.as<tir::BlockRealizeNode>()->block->body;
       matcher.Categorize(body);
+      std::cout << "size of set: " << matcher.index_vars.size() << std::endl;
     }
   }
 }
