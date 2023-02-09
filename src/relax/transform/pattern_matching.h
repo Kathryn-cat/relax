@@ -57,9 +57,14 @@ class PatternMatcher : public StmtExprVisitor {
       // this check does not exclude bias
       return;
     }
-    first_mat.insert(op->reads[0]->buffer);
-    second_mat.insert(op->reads[1]->buffer);
-    result_mat.insert(op->writes[0]->buffer);
+    const BufferRegion region_A = op->reads[0];
+    const BufferRegion region_B = op->reads[1];
+    const BufferRegion region_C = op->writes[0];
+    for (const Range range : region_A->region) {
+      // the range of each axis
+      std::cout << "region A min: " << range->min << std::endl;
+      // TODO: the next step is to check two PrimExpr are equal
+    }
   }
 
   // some private vars here
