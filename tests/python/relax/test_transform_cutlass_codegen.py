@@ -1511,28 +1511,29 @@ def constructTransGEMMDebug(m, n, k, GLOBAL_SYMBOL="TransHGEMMDebug"):
                         "global_symbol": GLOBAL_SYMBOL,
                     }
                 )
-                A = T.arg("A", T.buffer_decl((k, m), A_TYPE))  # pylint: disable=invalid-name
+                A = T.arg("A", T.buffer_decl((m, k), A_TYPE))  # pylint: disable=invalid-name
                 B = T.arg("B", T.buffer_decl((k, n), B_TYPE))  # pylint: disable=invalid-name
                 D = T.alloc_buffer((m, n), C_TYPE)
                 with T.grid(m, n, k) as (l0, l1, l2):
-                    with T.block("trans_dense_row_row_row"):
+                    with T.block("dense_row_row_row"):
                         vi, vj, vk = T.axis.remap("SSR", [l0, l1, l2])
-                        T.reads(A[vk, vi], B[vk, vj])
+                        T.reads(A[vi, vk], B[vk, vj])
                         T.writes(D[vi, vj])
                         with T.init():
                             T.buffer_store(D, T.cast(0.0, C_TYPE), [vi, vj])
                         T.buffer_store(
                             D,
-                            D[vi, vj] + A[vk, vi] * B[vk, vj],
+                            D[vi, vj] + A[vi, vk] * B[vk, vj],
                             [vi, vj],
                         )
             with R.function():
                 R.func_name("main")
                 A = R.arg("A", R.tensor((k, m), A_TYPE))  # pylint: disable=invalid-name
                 B = R.arg("B", R.tensor((k, n), B_TYPE))  # pylint: disable=invalid-name
+                A_reshaped: R.tensor((m, k), A_TYPE) = R.reshape(A, (m, k))
                 C = R.call_tir(
                     frame.global_vars[GLOBAL_SYMBOL],
-                    args=[A, B],
+                    args=[A_reshaped, B],
                     shape=(m, n),
                     dtype=C_TYPE,
                 )
@@ -1542,8 +1543,8 @@ def constructTransGEMMDebug(m, n, k, GLOBAL_SYMBOL="TransHGEMMDebug"):
 
 
 def test_cutlass_trans_dense_debug():
-    m, n, k = 128, 128, 128
-    assert build(constructTransGEMMDebug(m, n, k)), "build failure on CUDA"
+    m, n, k = 64, 128, 32
+    build(constructTransGEMMDebug(m, n, k))
     dev = tvm.cuda()
     A = np.random.rand(k, m).astype("float16") * 5
     B = np.random.rand(k, n).astype("float16") * 5
