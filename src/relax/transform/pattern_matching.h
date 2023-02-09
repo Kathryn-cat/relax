@@ -109,6 +109,7 @@ void PreProcessModule(const tvm::IRModule& mod) {
       matcher.Categorize(body);
     }
   }
+  // TODO: emit function call to R.function() based on the categorized variables
 }
 
 }  // namespace relax
