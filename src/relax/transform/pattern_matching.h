@@ -33,7 +33,6 @@
 namespace tvm {
 namespace tir {
 
-// TODO: write the categorization code here
 // can make a new class, subclass of StmtExprVisitor/Mutator
 // for now, we only focus on the categorization part
 class PatternMatcher : public StmtExprVisitor {
@@ -56,27 +55,39 @@ class PatternMatcher : public StmtExprVisitor {
       return;
     }
     // this mapping should be per block
-    std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> all_index_vars;
+    std::unordered_map<Var, int, ObjectPtrHash, ObjectPtrEqual> index_var_map;
     const BufferRegion region_A = op->reads[0];
     const BufferRegion region_B = op->reads[1];
     const BufferRegion region_C = op->writes[0];
 
-    // step 0. summary of all indices vars that appeared
+    // step 0. assign vars appearing in A/B region with weight 1,
+    // and vars appearing in C region with weight 2.
+    // TODO: checks bias case and ill-formed einsum
     auto f_get_index_vars =
-        [](const BufferRegion region,
-           std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual>* all_index_vars) {
+        [](const BufferRegion region, int weight,
+           std::unordered_map<Var, int, ObjectPtrHash, ObjectPtrEqual>* index_var_map) {
           for (const Range range : region->region) {
             // the indices of region, might contain 2,3, or many
             const VarNode* index_ptr = range->min.as<VarNode>();
             ICHECK(index_ptr != nullptr);
             const Var index_var = GetRef<Var>(index_ptr);
-            all_index_vars->insert(index_var);
-            std::cout << "inserted var to set" << std::endl;
+            if (index_var_map->find(index_var) == index_var_map->end()) {
+              index_var_map->insert({index_var, weight});
+            } else {
+              (*index_var_map)[index_var] += weight;
+            }
+            std::cout << "inserted var to map with weight " << weight << std::endl;
           }
         };
-    f_get_index_vars(region_A, &all_index_vars);
-    f_get_index_vars(region_B, &all_index_vars);
-    f_get_index_vars(region_C, &all_index_vars);
+    f_get_index_vars(region_A, 1, &index_var_map);
+    f_get_index_vars(region_B, 1, &index_var_map);
+    f_get_index_vars(region_C, 2, &index_var_map);
+
+    // debug: check the weights in map
+    std::cout << "checking map" << std::endl;
+    for (const auto& kv : index_var_map) {
+      std::cout << kv.second << ", " << std::endl;
+    }
   }
 
   // some private vars here
