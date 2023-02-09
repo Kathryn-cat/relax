@@ -42,7 +42,7 @@ class PatternMatcher : public StmtExprVisitor {
 
   // some public vars here, like loop categorization
   // temporarily this is a set, but will change into hash values of 0, 1 later
-  std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> index_vars;
+  // TODO: add categorized vars of matmul blocks (might be many) here
 
  private:
   // helper function goes here
@@ -55,33 +55,28 @@ class PatternMatcher : public StmtExprVisitor {
       // this check does not exclude bias
       return;
     }
+    // this mapping should be per block
+    std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> all_index_vars;
     const BufferRegion region_A = op->reads[0];
     const BufferRegion region_B = op->reads[1];
     const BufferRegion region_C = op->writes[0];
-    for (const Range range : region_A->region) {
-      // the indices of region, might contain 2,3, or many
-      const VarNode* index_ptr = range->min.as<VarNode>();
-      ICHECK(index_ptr != nullptr);
-      const Var index_var = GetRef<Var>(index_ptr);
-      index_vars.insert(index_var);
-      std::cout << "inserted var to set" << std::endl;
-    }
-    for (const Range range : region_B->region) {
-      // the indices of region, might contain 2,3, or many
-      const VarNode* index_ptr = range->min.as<VarNode>();
-      ICHECK(index_ptr != nullptr);
-      const Var index_var = GetRef<Var>(index_ptr);
-      index_vars.insert(index_var);
-      std::cout << "inserted var to set" << std::endl;
-    }
-    for (const Range range : region_C->region) {
-      // the indices of region, might contain 2,3, or many
-      const VarNode* index_ptr = range->min.as<VarNode>();
-      ICHECK(index_ptr != nullptr);
-      const Var index_var = GetRef<Var>(index_ptr);
-      index_vars.insert(index_var);
-      std::cout << "inserted var to set" << std::endl;
-    }
+
+    // step 0. summary of all indices vars that appeared
+    auto f_get_index_vars =
+        [](const BufferRegion region,
+           std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual>* all_index_vars) {
+          for (const Range range : region->region) {
+            // the indices of region, might contain 2,3, or many
+            const VarNode* index_ptr = range->min.as<VarNode>();
+            ICHECK(index_ptr != nullptr);
+            const Var index_var = GetRef<Var>(index_ptr);
+            all_index_vars->insert(index_var);
+            std::cout << "inserted var to set" << std::endl;
+          }
+        };
+    f_get_index_vars(region_A, &all_index_vars);
+    f_get_index_vars(region_B, &all_index_vars);
+    f_get_index_vars(region_C, &all_index_vars);
   }
 
   // some private vars here
@@ -101,7 +96,6 @@ void PreProcessModule(const tvm::IRModule& mod) {
     if (auto* func = kv.second.as<tir::PrimFuncNode>()) {
       tir::Stmt body = func->body.as<tir::BlockRealizeNode>()->block->body;
       matcher.Categorize(body);
-      std::cout << "size of set: " << matcher.index_vars.size() << std::endl;
     }
   }
 }
