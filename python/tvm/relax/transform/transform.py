@@ -19,13 +19,14 @@
 import functools
 import inspect
 import types
-from typing import Callable, Dict, Union, Optional, List, Tuple
-import numpy as np  # type: ignore
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import numpy as np  # type: ignore
 import tvm.ir
 from tvm.runtime import NDArray
-from . import _ffi_api
+
 from ..expr import Var
+from . import _ffi_api
 
 
 @tvm._ffi.register_object("relax.FunctionPass")
@@ -361,6 +362,17 @@ def FuseTIR() -> tvm.ir.transform.Pass:
     return _ffi_api.FuseTIR()  # type: ignore
 
 
+def PreProcess() -> tvm.ir.transform.Pass:
+    """Pre-process IR module for dispatch in einsum
+
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for tir fusion.
+    """
+    return _ffi_api.PreProcess()  # type: ignore
+
+
 def MetaScheduleApplyDatabase(
     work_dir: Optional[str] = None,
 ) -> tvm.ir.transform.Pass:
@@ -413,6 +425,50 @@ def MetaScheduleTuneIRMod(
     ret: tvm.ir.transform.Pass
     """
     return _ffi_api.MetaScheduleTuneIRMod(params, work_dir, max_trials_global)  # type: ignore
+
+
+def CutlassCodegen() -> tvm.ir.transform.Pass:
+    """Inject the cutlass code into the PrimFunc that is matched with cutlass kernels.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for cutlass codegen.
+    """
+    return _ffi_api.CutlassCodegen()
+
+
+def DispatchCutlass() -> tvm.ir.transform.Pass:
+    """Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
+       matched with some cutlass kernels, and the second part is the rest of the original
+       PrimFunc that is not fused with cutlass kernels.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for cutlass codegen.
+    """
+    return _ffi_api.DispatchCutlass()
+
+
+def CublasCodegen() -> tvm.ir.transform.Pass:
+    """Inject the cublas code into the PrimFunc that is matched with cublas kernels.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for cublas codegen.
+    """
+    return _ffi_api.CublasCodegen()
+
+
+def SplitCublas() -> tvm.ir.transform.Pass:
+    """Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
+       matched with some cublas kernels, and the second part is the rest of the original
+       PrimFunc that is not fused with cublas kernels.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for cublas codegen.
+    """
+    return _ffi_api.SplitCublas()
 
 
 def ToMixedPrecision(out_dtype="float32") -> tvm.ir.transform.Pass:
