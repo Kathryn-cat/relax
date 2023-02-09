@@ -61,8 +61,10 @@ class PatternMatcher : public StmtExprVisitor {
     const BufferRegion region_B = op->reads[1];
     const BufferRegion region_C = op->writes[0];
     for (const Range range : region_A->region) {
-      // the range of each axis
-      std::cout << "region A min: " << range->min << std::endl;
+      // the indices of region, might contain 2,3, or many
+      const VarNode* index_ptr = range->min.as<VarNode>();
+      ICHECK(index_ptr != nullptr);
+      const Var index_var = GetRef<Var>(index_ptr);
       // TODO: the next step is to check two PrimExpr are equal
     }
   }
