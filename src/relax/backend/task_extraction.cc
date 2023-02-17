@@ -79,7 +79,11 @@ class TaskExtractor : public ExprVisitor {
     }
 
     const GlobalVar& global_var = Downcast<GlobalVar>(call->args[0]);
-    const tir::PrimFunc& func = Downcast<tir::PrimFunc>(mod_->Lookup(global_var));
+    const auto* func_ptr = mod_->Lookup(global_var).as<tir::PrimFuncNode>();
+    if (!func_ptr) {
+      return;
+    }
+    const tir::PrimFunc& func = GetRef<tir::PrimFunc>(func_ptr);
 
     auto it = func2task_.find(func);
     if (it != func2task_.end()) {

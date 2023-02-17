@@ -19,13 +19,14 @@
 import functools
 import inspect
 import types
-from typing import Callable, Dict, Union, Optional, List, Tuple
-import numpy as np  # type: ignore
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import numpy as np  # type: ignore
 import tvm.ir
 from tvm.runtime import NDArray
-from . import _ffi_api
+
 from ..expr import Var
+from . import _ffi_api
 from .legalize_ops.common import LegalizeFunc
 
 
@@ -503,6 +504,16 @@ def Gradient(
         require_grads = [require_grads]
 
     return _ffi_api.Gradient(func_name, require_grads)  # type: ignore
+
+
+def Transform2GEMM() -> tvm.ir.transform.Pass:
+    """Transform an einsum computation to GEMM/HGEMM for dispatching.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for transformation to GEMM/HGEMM.
+    """
+    return _ffi_api.Transform2GEMM()  # type: ignore
 
 
 def SplitCallTIRByPattern(patterns, fcodegen) -> tvm.ir.transform.Pass:

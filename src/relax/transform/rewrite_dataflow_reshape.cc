@@ -80,7 +80,10 @@ class DataflowReshapeRewriter : public ExprMutator {
       return false;
     }
     const auto* func = mod_->functions.Get(GetRef<GlobalVar>(gv)).as<tir::PrimFuncNode>();
-    ICHECK_NOTNULL(func);
+    // ICHECK_NOTNULL(func);
+    if (!func) {
+      return false;
+    }
     return HasReshapePattern(GetRef<tir::PrimFunc>(func));
   }
 

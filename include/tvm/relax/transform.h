@@ -277,6 +277,12 @@ TVM_DLL Pass ConvertLayout(Map<String, Array<String>> desired_layouts);
 TVM_DLL Pass Gradient(String func_name, Optional<Array<Var>> require_grads = NullOpt);
 
 /*!
+ * \brief Transform an einsum computation to GEMM/HGEMM for dispatching.
+ * \return The Pass.
+ */
+TVM_DLL Pass Transform2GEMM();
+
+/*!
  * \brief Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
  *        matched with some cutlass kernels, and the second part is the rest of the
  *        original PrimFunc that is not fused with cutlass kernels.
