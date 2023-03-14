@@ -98,5 +98,15 @@ def test_call_tir():
     mod.show()
 
 
+@tvm.testing.requires_cutlass
+def test_call_tir1():
+    m, n, k = 32, 64, 128
+    mod = constructGEMM(m, n, k)
+    mod.show()
+    mod = relax.transform.SplitCallTIRByPattern(
+        get_cutlass_pattern(), cutlass_codegen_with_match_results
+    )(mod)
+
+
 if __name__ == "__main__":
-    test_call_tir()
+    test_call_tir1()

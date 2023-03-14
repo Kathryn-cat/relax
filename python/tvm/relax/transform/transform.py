@@ -19,14 +19,15 @@
 import functools
 import inspect
 import types
-from typing import Callable, Dict, Union, Optional, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
+
 import numpy as np  # type: ignore
 import tvm.ir
 from tvm.runtime import NDArray
 
+from ..expr import Var
 from . import _ffi_api
 from .legalize_ops.common import LegalizeFunc
-from ..expr import Var
 
 
 @tvm._ffi.register_object("relax.FunctionPass")
@@ -107,6 +108,24 @@ def RewriteDataflowReshape() -> tvm.ir.transform.Pass:
     ret : tvm.ir.transform.Pass
     """
     return _ffi_api.RewriteDataflowReshape()  # type: ignore
+
+
+def SplitCallTIRByPattern(patterns, fcodegen) -> tvm.ir.transform.Pass:
+    """Split a PrimFunc into 2 parts: the first part is a TIR PrimFunc which is
+       matched with some cutlass kernels, and the second part is the rest of the original
+       PrimFunc that is not fused with cutlass kernels.
+    Parameters
+    ----------
+    patterns : List[PrimFunc]
+        The list of patterns to match.
+    fcodegen: Callable[[List[MatchResult]], List[Object]]
+        The function to generate the code for the matched patterns.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for splitting call_tir.
+    """
+    return _ffi_api.SplitCallTIRByPattern(patterns, fcodegen)  # type: ignore
 
 
 def StaticPlanBlockMemory() -> tvm.ir.transform.Pass:
