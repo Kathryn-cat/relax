@@ -91,6 +91,11 @@ def test_call_tir():
     m, n, k = 32, 64, 128
     mod = constructGEMM(m, n, k)
     mod.show()
+    mod = partition_for_cutlass(mod)
+    mod.show()
+    codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
+    mod = codegen_pass(mod)
+    mod.show()
 
 
 if __name__ == "__main__":
