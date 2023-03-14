@@ -55,3 +55,43 @@ def get_result_with_relax_cutlass_offload(mod, *args, assert_all_bindings_fused=
     mod = codegen_pass(mod)
 
     return build_and_run(mod, args, "cuda")
+
+
+def constructGEMM(m, n, k, dtype="float16"):
+    @tvm.script.ir_module
+    class HGEMM:
+        @T.prim_func
+        def hgemm(x: T.handle, y: T.handle, z: T.handle) -> None:
+            A = T.match_buffer(x, (m, k), dtype)  # pylint: disable=invalid-name
+            B = T.match_buffer(y, (k, n), dtype)  # pylint: disable=invalid-name
+            C = T.match_buffer(z, (m, n), dtype)  # pylint: disable=invalid-name
+            for l0, l1, l2 in T.grid(m, n, k):
+                with T.block("matmul"):
+                    vi, vj, vk = T.axis.remap("SSR", [l0, l1, l2])
+                    T.reads(A[vi, vk], B[vk, vj])
+                    T.writes(C[vi, vj])
+                    with T.init():
+                        C[vi, vj] = T.cast(0.0, dtype)
+                    C[vi, vj] += A[vi, vk] * B[vk, vj]
+
+        @R.function
+        def main(A: R.Tensor((m, k), dtype), B: R.Tensor((k, n), dtype)):
+            with R.dataflow():
+                C: R.Tensor((m, n), dtype) = R.call_tir(
+                    HGEMM.hgemm, (A, B), R.Tensor((m, n), dtype)
+                )
+                R.output(C)
+            return C
+
+    return HGEMM
+
+
+@tvm.testing.requires_cutlass
+def test_call_tir():
+    m, n, k = 32, 64, 128
+    mod = constructGEMM(m, n, k)
+    mod.show()
+
+
+if __name__ == "__main__":
+    test_call_tir()
