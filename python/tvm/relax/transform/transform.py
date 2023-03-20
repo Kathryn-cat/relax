@@ -19,7 +19,7 @@
 import functools
 import inspect
 import types
-from typing import Callable, Dict, Union, Optional, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 # isort: off
 from typing_extensions import Literal
@@ -255,6 +255,16 @@ def AnnotateTIROpPattern() -> tvm.ir.transform.Pass:
     ret: tvm.ir.transform.Pass
     """
     return _ffi_api.AnnotateTIROpPattern()  # type: ignore
+
+
+def SplitPrimFunc() -> tvm.ir.transform.Pass:
+    """Split prim_func with multiple for loops into one for loop per prim_func.
+    Returns
+    -------
+    ret : tvm.transform.Pass
+        The registered pass for splitting prim_func.
+    """
+    return _ffi_api.SplitPrimFunc()  # type: ignore
 
 
 def FuseOps(fuse_opt_level=-1) -> tvm.ir.transform.Pass:
