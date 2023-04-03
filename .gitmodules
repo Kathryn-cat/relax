@@ -22,3 +22,6 @@
 [submodule "3rdparty/cnpy"]
 	path = 3rdparty/cnpy
 	url = https://github.com/rogersce/cnpy.git
+[submodule "mlc-stable-diffusion"]
+	path = mlc-stable-diffusion
+	url = git@github.com:mlc-ai/mlc-stable-diffusion.git
