@@ -16,7 +16,6 @@
 # under the License.
 import numpy as np
 import pytest
-
 import tvm
 import tvm.testing
 import tvm.topi.testing
@@ -570,7 +569,8 @@ def get_relax_attention_module(q, k, v, bias=None, qk_scale=None):
     dtype = str(q.dtype)
 
     from tvm.script.ir_builder import IRBuilder
-    from tvm.script.ir_builder import relax as relax_builder, tir as T
+    from tvm.script.ir_builder import relax as relax_builder
+    from tvm.script.ir_builder import tir as T
 
     if qk_scale is not None:
         qk_scale = T.FloatImm("float32", qk_scale)
