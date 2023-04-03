@@ -47,6 +47,8 @@ def get_result_with_relax_cutlass_offload(mod, *args, assert_all_bindings_fused=
     assert len(patterns) != 0, "Cannot find cutlass patterns"
 
     mod = partition_for_cutlass(mod)
+    print("after fuse ops by pattern:")
+    mod.show()
 
     if assert_all_bindings_fused:
         assert len(mod["main"].body.blocks[0].bindings) == 1
@@ -114,6 +116,8 @@ def test_attention_offload():
     )
 
     mod = get_relax_attention_module(q, k, v)
+    print("original mod:")
+    mod.show()
     out = get_result_with_relax_cutlass_offload(mod, q, k, v)
 
     tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
