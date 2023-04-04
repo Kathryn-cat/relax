@@ -164,10 +164,16 @@ def get_relax_attention_module_sd(b, s, s_kv, n, h, h_v):
 
 def test_attention_offload_sd():
     b, (s, s_kv), n, (h, h_v) = 2, (4096, 4096), 8, (40, 40)
+    q, k, v, _, ref = get_numpy_attention_ref(
+        b, s, s_kv, n, h, h_v, "none", "none", "none", "float32"
+    )
 
     mod = get_relax_attention_module_sd(b, s, s_kv, n, h, h_v)
     print("original mod:")
     mod.show()
+
+    out = build_and_run(mod, [q, k, v], "llvm", legalize=True)
+    tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
 
 
 if __name__ == "__main__":
