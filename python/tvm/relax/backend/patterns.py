@@ -190,3 +190,47 @@ def make_attention_pattern(with_bias: bool = False):
         out = is_op("relax.nn.attention")(query, key, value)
 
     return out, annotations
+
+
+def make_special_attention_pattern():
+    """
+    Create pattern for fused multi head attention (dispatch to SD and LM).
+
+    Returns
+    -------
+    pattern: DFPattern
+        The resulting pattern describing a fused multi head attention.
+
+    annotations: Mapping[str, DFPattern]
+        A mapping from name to sub pattern. It can be used to extract
+        important expressions from match result, to power the partition
+        check function and codegen.
+    """
+    query = wildcard()
+    key = wildcard()
+    value = wildcard()
+    qk_scale = wildcard()
+    annotations = {"query": query, "key": key, "value": value, "qk_scale": qk_scale}
+
+    # for SD, 13 ops in total
+    # op 1-2
+    query = is_op("relax.permute_dims")(query)
+    query = is_op("relax.reshape")(query)
+    # op 3-4
+    key = is_op("relax.permute_dims")(key)
+    key = is_op("relax.reshape")(key)
+    # op 5-6
+    value = is_op("relax.permute_dims")(value)
+    value = is_op("relax.reshape")(value)
+    # op 7
+    key = is_op("relax.permute_dims")(key)
+    # op 8-10
+    score = is_op("relax.matmul")(query, key)
+    score = is_op("relax.multiply")(score, qk_scale)
+    attn = is_op("relax.nn.softmax")(score)
+    # op 11-13
+    out = is_op("relax.matmul")(attn, value)
+    out = is_op("relax.reshape")(out)
+    out = is_op("relax.permute_dims")(out)
+
+    return out, annotations
