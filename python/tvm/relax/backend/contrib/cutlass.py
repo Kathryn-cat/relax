@@ -30,6 +30,7 @@ from ..patterns import (
     make_fused_bias_activation_pattern,
     make_matmul_pattern,
     make_residual_block_pattern,
+    make_special_attention_pattern,
 )
 
 
@@ -258,12 +259,25 @@ def attention_patterns():
     ]
 
 
+def special_attention_patterns():
+    """
+    Returns a list of all attention patterns in cutlass BYOC backend. (dispatch to SD and LM)
+    """
+    return [
+        (
+            "cutlass.special_attention_sd",
+            *make_special_attention_pattern(),
+        ),
+    ]
+
+
 register_patterns(
     [
         *conv2d_patterns(),
         *matmul_patterns(),
         *residual_block_patterns(),
         *attention_patterns(),
+        *special_attention_patterns(),
     ]
 )
 
@@ -290,6 +304,7 @@ def partition_for_cutlass(mod, annotate_codegen=True):
     """
 
     patterns = get_patterns_with_prefix("cutlass")
+    assert len(patterns) == 51
     return transform.FuseOpsByPattern(
         patterns, bind_constants=False, annotate_codegen=annotate_codegen
     )(mod)
