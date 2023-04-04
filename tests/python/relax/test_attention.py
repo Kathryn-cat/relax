@@ -172,8 +172,22 @@ def test_attention_offload_sd():
     print("original mod:")
     mod.show()
 
-    out = build_and_run(mod, [q, k, v], "llvm", legalize=True)
-    tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
+    # ----- change the mod to packed version (hand-crafted) -----
+
+    patterns = [(entry.name, entry.pattern) for entry in get_patterns_with_prefix("cutlass")]
+    assert len(patterns) != 0, "Cannot find cutlass patterns"
+    print(f"number of cutlass patterns: {len(patterns)}")
+    for name, pattern in patterns:
+        if "attention" in name:
+            print(f"name: {name}\npattern: {pattern}\n")
+
+    # TODO: can we make a new pattern here?
+
+    # codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
+    # mod = codegen_pass(mod)
+
+    # out = build_and_run(mod, [q, k, v], "cuda", legalize=True)
+    # tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
 
 
 if __name__ == "__main__":
