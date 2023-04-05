@@ -181,8 +181,6 @@ def test_attention_offload_sd():
         print(f"{i}: name: {name}\npattern: {pattern}\n")
     print("--------------------------------")
 
-    # TODO: can we make a new pattern here?
-
     print("after fused ops:")
     mod = partition_for_cutlass(mod)
     mod.show()
