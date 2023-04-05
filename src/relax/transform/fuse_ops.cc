@@ -1145,6 +1145,7 @@ class CompositeFunctionAnnotator : public ExprMutator {
 IRModule FuseOpsByPattern(const tvm::Array<transform::FusionPattern>& patterns, IRModule mod,
                           bool bind_constants, bool annotate_codegen) {
   support::Arena arena;
+  int i = 0;
   for (const auto& pattern : patterns) {
     OperatorFusor::GroupMap group_map;
     for (const auto& entry : mod->functions) {
@@ -1156,7 +1157,10 @@ IRModule FuseOpsByPattern(const tvm::Array<transform::FusionPattern>& patterns, 
           pattern->check.value_or(nullptr), entry.second, &arena);
       group_map.insert(map.begin(), map.end());
     }
+    std::cout << "round: " << i << ", group_map size: " << group_map.size() << std::endl;
+    std::cout << "-------------------------------------" << std::endl;
     mod = MakeGroupedFunctions(mod, group_map, /*lift_constants*/ !bind_constants);
+    i++;
   }
   if (annotate_codegen) {
     return CompositeFunctionAnnotator(mod).Run();

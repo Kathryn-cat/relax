@@ -47,14 +47,18 @@ class CodeGenRunner : ExprMutator {
       builder_->UpdateFunction(gvar, Downcast<BaseFunc>(VisitExpr(entry_func)));
     }
 
+    IRModule new_mod = builder_->GetContextIRModule();
+
     auto ext_mods = InvokeCodegen(mod, target_options.value_or({}));
     auto out_mod = builder_->GetContextIRModule();
 
     if (ext_mods.size()) {
+      std::cout << "ext_mods size: " << ext_mods.size() << std::endl;
       out_mod = WithAttr(out_mod, tvm::attr::kExternalMods, std::move(ext_mods));
     }
 
     if (constant_names.size()) {
+      std::cout << "constant_names size: " << constant_names.size() << std::endl;
       // Some backends (e.g. TensorRT) expect constants to be passed when they are instantiated
       Map<String, runtime::NDArray> constants;
       for (const auto& [constant, name] : constant_names) {
@@ -74,6 +78,7 @@ class CodeGenRunner : ExprMutator {
     auto call = Downcast<Call>(ExprMutator::VisitExpr_(call_node));
     if (auto const* gvar_node = call_node->op.as<GlobalVarNode>()) {
       const GlobalVar gvar = GetRef<GlobalVar>(gvar_node);
+      std::cout << "call_node gvar: " << gvar << std::endl;
 
       auto create_call_dps_packed = [call_node, this](Expr extern_func,
                                                       StructInfo ret_struct_info) {
@@ -86,6 +91,7 @@ class CodeGenRunner : ExprMutator {
       };
 
       if (auto it = extern_funcs_.find(gvar_node); it != extern_funcs_.end()) {
+        std::cout << "call_node: find extern_funcs" << std::endl;
         return create_call_dps_packed(it->second.first, it->second.second);
       } else {
         // TODO(@sunggg): Is there any better way to get this func?
@@ -102,6 +108,7 @@ class CodeGenRunner : ExprMutator {
           func = (*RemoveFuncAttrFunc)(func, tvm::attr::kGlobalSymbol);
           func = (*RemoveFuncAttrFunc)(func, attr::kCodegen);
           builder_->UpdateFunction(gvar, func);
+          std::cout << "call_node: lookup find new func" << std::endl;
           return create_call_dps_packed(new_func, func->ret_struct_info);
         }
       }
@@ -111,6 +118,7 @@ class CodeGenRunner : ExprMutator {
       new_args.push_back(VisitExpr(arg));
     }
 
+    std::cout << "call_node: reach the end" << std::endl;
     return Call(call_node->op, new_args, call_node->attrs, call_node->sinfo_args, call_node->span);
   }
 
@@ -118,18 +126,23 @@ class CodeGenRunner : ExprMutator {
     Function func = GetRef<Function>(func_node);
     auto opt_codegen = func->GetAttr<String>(attr::kCodegen);
     if (opt_codegen) {
+      std::cout << "func_node: find opt_codegen" << std::endl;
       auto ext_symbol = GetExtSymbol(func);
+      std::cout << "ext_symbol: " << ext_symbol << std::endl;
       size_t count = 0;
       PostOrderVisit(func->body, [=, &count](Expr e) {
         if (e->IsInstance<ConstantNode>()) {
           // Make sure to pick a unique name
           auto name = ext_symbol + "_" + opt_codegen.value() + "_const_" + std::to_string(count++);
           auto constant = Downcast<Constant>(e);
+          std::cout << "constant: " << constant << std::endl;
+          std::cout << "constant_name: " << name << std::endl;
           constant_names.Set(constant, name);
         }
       });
       return ExternFunc(GetExtSymbol(func));
     } else {
+      std::cout << "func_node: not find opt_codegen" << std::endl;
       return ExprMutator::VisitExpr_(func_node);
     }
   }
@@ -142,6 +155,8 @@ class CodeGenRunner : ExprMutator {
       if (entry.second->IsInstance<tir::PrimFuncNode>()) {
         continue;
       }
+      std::cout << "InvokeCodegen visiting func:" << std::endl;
+      std::cout << entry.second << std::endl;
       PostOrderVisit(entry.second, [&target_functions](Expr e) {
         if (e->IsInstance<FunctionNode>()) {
           auto f = Downcast<Function>(e);
@@ -156,7 +171,10 @@ class CodeGenRunner : ExprMutator {
     Array<runtime::Module> ext_mods;
 
     for (const auto& [target, functions] : target_functions) {
+      std::cout << "target_functions: " << std::endl;
+      std::cout << functions << std::endl;
       OptionMap options = target_options.Get(target).value_or({});
+      std::cout << "options: " << options << std::endl;
       // Start the codegen process.
       // Get the codegen with its ffi key.
       String codegen_name = "relax.ext." + target;

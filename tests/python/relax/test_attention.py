@@ -172,16 +172,20 @@ def test_attention_offload_sd():
     print("original mod:")
     mod.show()
 
-    # ----- change the mod to packed version (hand-crafted) -----
+    # ----- change the mod to packed version -----
 
     patterns = [(entry.name, entry.pattern) for entry in get_patterns_with_prefix("cutlass")]
     assert len(patterns) != 0, "Cannot find cutlass patterns"
     print(f"number of cutlass patterns: {len(patterns)}")
-    for name, pattern in patterns:
-        if "attention" in name:
-            print(f"name: {name}\npattern: {pattern}\n")
+    for i, (name, pattern) in enumerate(patterns):
+        print(f"{i}: name: {name}\npattern: {pattern}\n")
+    print("--------------------------------")
 
     # TODO: can we make a new pattern here?
+
+    print("after fused ops:")
+    mod = partition_for_cutlass(mod)
+    mod.show()
 
     # codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
     # mod = codegen_pass(mod)
@@ -191,4 +195,5 @@ def test_attention_offload_sd():
 
 
 if __name__ == "__main__":
+    # test_attention_offload()
     test_attention_offload_sd()
