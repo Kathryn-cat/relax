@@ -20,6 +20,8 @@ from .library import *
 
 
 def instantiate_attention_template(attrs, func_args):
+    print(f"attrs: {attrs}")
+    print(f"func_args: {func_args}")
     """Return CUTLASS host code for fused multi head attention
     based on a template and the provided attribute map."""
 
@@ -129,6 +131,11 @@ def instantiate_attention_template(attrs, func_args):
         {"bias_template": bias_template[attrs["bias_layout"]] if "bias_layout" in attrs else ""},
     )
 
+    print(f"attrs: {attrs}")
+
+    count = 0
     for i, arg in enumerate(func_args):
-        attrs["arg{}".format(i)] = arg
+        if "param" not in arg:
+            attrs["arg{}".format(count)] = arg
+            count += 1
     return substitute_template(template, attrs)

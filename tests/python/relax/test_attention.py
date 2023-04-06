@@ -185,11 +185,12 @@ def test_attention_offload_sd():
     mod = partition_for_cutlass(mod)
     mod.show()
 
-    # codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
-    # mod = codegen_pass(mod)
+    print("begin codegen:")
+    codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
+    mod = codegen_pass(mod)
 
-    # out = build_and_run(mod, [q, k, v], "cuda", legalize=True)
-    # tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
+    out = build_and_run(mod, [q, k, v], "cuda", legalize=True)
+    tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
 
 
 if __name__ == "__main__":

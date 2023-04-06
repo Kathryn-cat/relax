@@ -19,7 +19,7 @@
 
 from typing import Dict, Mapping, Tuple, Union
 
-from tvm.relax.dpl.pattern import DFPattern, is_op, wildcard
+from tvm.relax.dpl.pattern import DFPattern, is_const, is_op, wildcard
 
 
 def _with_bias_activation_pattern(
@@ -209,40 +209,28 @@ def make_special_attention_pattern():
     query = wildcard()
     key = wildcard()
     value = wildcard()
-    shape1 = wildcard()
-    shape2 = wildcard()
-    shape3 = wildcard()
-    shape4 = wildcard()
-    qk_scale = wildcard()
     annotations = {
         "query": query,
         "key": key,
         "value": value,
-        "shape1": shape1,
-        "shape2": shape2,
-        "shape3": shape3,
-        "shape4": shape4,
-        "qk_scale": qk_scale,
     }
 
     # for SD, 13 ops in total
-    # op 1-2
+    # op 1-6
     query = is_op("relax.permute_dims")(query)
-    query = is_op("relax.reshape")(query, shape1)
-    # op 3-4
     key = is_op("relax.permute_dims")(key)
-    key = is_op("relax.reshape")(key, shape2)
-    # op 5-6
     value = is_op("relax.permute_dims")(value)
-    value = is_op("relax.reshape")(value, shape3)
+    query = is_op("relax.reshape")(query, wildcard())
+    key = is_op("relax.reshape")(key, wildcard())
+    value = is_op("relax.reshape")(value, wildcard())
     # op 7
     key = is_op("relax.permute_dims")(key)
     # op 8-10
     score = is_op("relax.matmul")(query, key)
-    score = is_op("relax.multiply")(score, qk_scale)
+    score = is_op("relax.multiply")(score, is_const())
     attn = is_op("relax.nn.softmax")(score)
     # op 11-13
     out = is_op("relax.matmul")(attn, value)
-    out = is_op("relax.reshape")(out, shape4)
+    out = is_op("relax.reshape")(out, wildcard())
     out = is_op("relax.permute_dims")(out)
     return out, annotations

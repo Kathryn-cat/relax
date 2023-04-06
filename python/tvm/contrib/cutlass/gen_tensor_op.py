@@ -494,6 +494,9 @@ def instantiate_template(func_name, annotations, func_args):
     codegen_result : CodegenResult
         Generated CUTLASS host code and required header-file names.
     """
+    print(f"instantiate_template:")
+    print(f"func_name: {func_name}, func_args: {func_args}")
+    # NOTE: func_args might be excessive
     attrs = {}
 
     for k in ["lda", "ldb", "ldc", "cutlass_op_def", "cutlass_op_name", "op_type"]:
@@ -731,7 +734,7 @@ def instantiate_template(func_name, annotations, func_args):
         ), "Cutlass may generate nan occasionally when scale == 0.0"
         attrs["arch"] = "cutlass::arch::Sm{}".format(annotations["arch"])
         attrs["kSupportsDropout"] = False
-        if len(func_args) > 3:
+        if "arg3_shape" in annotations:
             attrs["kSupportsBias"] = True
             if len(annotations["arg3_shape"]) == 4:
                 attrs["bias_layout"] = "BNSS'"

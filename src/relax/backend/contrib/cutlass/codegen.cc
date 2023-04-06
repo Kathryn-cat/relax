@@ -56,9 +56,12 @@ class CodegenCutlass : public relax::MemoizedExprTranslator<OutputType>,
     std::vector<std::string> arg_types, arg_names;
 
     for (const auto& arg : ext_func_args_) {
+      std::cout << "JIT arg: " << arg << std::endl;
       auto sinfo = GetStructInfo(arg);
       if (const auto* tensor_sinfo = sinfo.as<TensorStructInfoNode>()) {
         arg_types.emplace_back(backend::DType2String(tensor_sinfo->dtype));
+      } else if (sinfo.as<ShapeStructInfoNode>()) {
+        arg_types.emplace_back("");
       } else {
         LOG(FATAL) << "Unimplemented";
       }
