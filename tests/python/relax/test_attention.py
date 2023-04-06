@@ -27,6 +27,7 @@ from tvm.contrib.cutlass.build import is_shape_valid_for_cutlass_matmul
 from tvm.contrib.pickle_memoize import memoize
 from tvm.relax.backend import get_patterns_with_prefix
 from tvm.relax.backend.contrib.cutlass import partition_for_cutlass
+from tvm.relax.transform import LegalizeOps
 from tvm.script import relax as R
 from tvm.script.ir_builder import IRBuilder
 from tvm.script.ir_builder import relax as relax_builder
@@ -188,6 +189,9 @@ def test_attention_offload_sd():
     print("begin codegen:")
     codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
     mod = codegen_pass(mod)
+
+    print(f"after legalize ops:")
+    mod = LegalizeOps()(mod)
 
     out = build_and_run(mod, [q, k, v], "cuda", legalize=True)
     tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)

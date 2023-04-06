@@ -273,9 +273,9 @@ def special_attention_patterns():
 
 register_patterns(
     [
-        *conv2d_patterns(),
-        *matmul_patterns(),
-        *residual_block_patterns(),
+        # *conv2d_patterns(),
+        # *matmul_patterns(),
+        # *residual_block_patterns(),
         *attention_patterns(),
         *special_attention_patterns(),
     ]
@@ -304,7 +304,7 @@ def partition_for_cutlass(mod, annotate_codegen=True):
     """
 
     patterns = get_patterns_with_prefix("cutlass")
-    assert len(patterns) == 51
+    assert len(patterns) == 3
     return transform.FuseOpsByPattern(
         patterns, bind_constants=False, annotate_codegen=annotate_codegen
     )(mod)
