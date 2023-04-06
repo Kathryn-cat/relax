@@ -542,12 +542,16 @@ def _get_call_node(expr: relax.Expr, op_name: str) -> Optional[relax.Call]:
 
 
 def _extract_relax_function_signature(f):
+    print(f"f_extracted: {f}")
     signature = {}
 
+    count = 0
     for i, arg in enumerate(f.params):
         sinfo = arg.struct_info
-        signature["arg%d_shape" % i] = get_const_tuple(sinfo.shape)
-        signature["arg%d_dtype" % i] = sinfo.dtype
+        if type(sinfo) == tvm.relax.struct_info.TensorStructInfo and len(sinfo.shape):
+            signature["arg%d_shape" % count] = get_const_tuple(sinfo.shape)
+            signature["arg%d_dtype" % count] = sinfo.dtype
+            count += 1
 
     ret_sinfo = f.ret_struct_info
     if ret_sinfo.shape is not None:
@@ -556,6 +560,7 @@ def _extract_relax_function_signature(f):
         signature["ret_shape"] = None
     signature["ret_dtype"] = ret_sinfo.dtype
 
+    print(f"signature: {signature}")
     return signature
 
 
@@ -791,7 +796,7 @@ class CutlassRelaxFunctionAnnotator(relax.PyExprMutator):
         elif _get_call_node(f.body, "relax.nn.attention_bias") is not None:
             op_attrs = _get_call_node(f.body, "relax.nn.attention_bias").attrs
         else:
-            raise ValueError(f"Cannot find call node for attention")
+            op_attrs, scale = None, None
         q_shape = signature["arg0_shape"]
         k_shape = signature["arg1_shape"]
         v_shape = signature["arg2_shape"]
@@ -803,35 +808,38 @@ class CutlassRelaxFunctionAnnotator(relax.PyExprMutator):
         num_batches, num_queries, num_heads, head_dim = q_shape
         _, num_keys, _, _ = k_shape
         _, _, _, head_dim_value = v_shape
-        scale = op_attrs.scale
+        if op_attrs:
+            scale = op_attrs.scale
+        print(f"scale: {scale}")
         bias = {}
         if "arg3_dtype" in signature:
             bias["arg3_dtype"] = signature["arg3_dtype"]
         if "arg3_shape" in signature:
             bias["arg3_shape"] = signature["arg3_shape"]
 
-        return f.with_attrs(
-            {
-                "op_type": op_type,
-                "arg0_dtype": q_dtype,
-                "arg1_dtype": k_dtype,
-                "arg2_dtype": v_dtype,
-                "ret_dtype": out_dtype,
-                "arg0_shape": q_shape,
-                "arg1_shape": k_shape,
-                "arg2_shape": v_shape,
-                "ret_shape": out_shape,
-                "num_batches": num_batches,
-                "num_queries": num_queries,
-                "num_keys": num_keys,
-                "num_heads": num_heads,
-                "head_dim": head_dim,
-                "head_dim_value": head_dim_value,
-                "scale": scale,
-                "arch": self.options["sm"],
-                **bias,
-            }
-        )
+        res = {
+            "op_type": op_type,
+            "arg0_dtype": q_dtype,
+            "arg1_dtype": k_dtype,
+            "arg2_dtype": v_dtype,
+            "ret_dtype": out_dtype,
+            "arg0_shape": q_shape,
+            "arg1_shape": k_shape,
+            "arg2_shape": v_shape,
+            "ret_shape": out_shape,
+            "num_batches": num_batches,
+            "num_queries": num_queries,
+            "num_keys": num_keys,
+            "num_heads": num_heads,
+            "head_dim": head_dim,
+            "head_dim_value": head_dim_value,
+            "scale": scale,
+            "arch": self.options["sm"],
+            **bias,
+        }
+        print(f"res: {res}")
+
+        return f.with_attrs(res)
 
     def visit_function_(self, f):
         if "Composite" not in f.attrs:
