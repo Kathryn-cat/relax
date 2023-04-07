@@ -110,8 +110,10 @@ class GraphCreator : public ExprVisitor {
       // Only visit Relax function without attr kPrimitive.
       const auto* func = it.second.as<FunctionNode>();
       if (func == nullptr || func->HasNonzeroAttr(attr::kPrimitive)) {
+        std::cout << "creator not visiting func: " << it.second << std::endl;
         continue;
       }
+      std::cout << "creator visiting func: " << it.second << std::endl;
       creator(GetRef<Function>(func));
     }
 
@@ -130,6 +132,7 @@ class GraphCreator : public ExprVisitor {
       : mod_(std::move(mod)), arena_(arena) {}
 
   void VisitExpr_(const FunctionNode* func) final {
+    std::cout << "fuse_ops: visit func_node" << std::endl;
     for (const Var& param : func->params) {
       IndexedForwardGraph::Node* param_node = CreateNode(param.get());
       // The parameter is passed in from the outside, and thus it's marked as an external reference,
@@ -142,6 +145,7 @@ class GraphCreator : public ExprVisitor {
   }
 
   void VisitBindingBlock(const BindingBlock& block) final {
+    std::cout << "fuse_ops: visit binding block" << std::endl;
     if (const auto* df_block = block.as<DataflowBlockNode>()) {
       VisitBindingBlock_(df_block);
     }
@@ -151,6 +155,7 @@ class GraphCreator : public ExprVisitor {
   // TODO(tvm-team): how to deal with MatchCast binding here
 
   void VisitBinding_(const VarBindingNode* binding) final {
+    std::cout << "fuse_ops: visit binding" << std::endl;
     IndexedForwardGraph::Node* node = CreateNode(binding->var.get());
 
     // If the variable is not a dataflow variable, it must be the output variable of this dataflow
@@ -175,6 +180,9 @@ class GraphCreator : public ExprVisitor {
   /********** Non-Leaf Expression Nodes **********/
 
   void VisitCall(const CallNode* call, IndexedForwardGraph::Node* binding_var_node) {
+    std::cout << "fuse_ops: visit call" << std::endl;
+    std::cout << "call op: " << call->op << std::endl;
+    std::cout << "call first arg: " << call->args[0] << std::endl;
     ICHECK_NOTNULL(binding_var_node);
 
     static const Op& call_tir_op_ = Op::Get("relax.call_tir");
@@ -187,6 +195,7 @@ class GraphCreator : public ExprVisitor {
     // recurse into the call expression.
     const auto* op = call->op.as<OpNode>();
     if (op == call_tir_op_.get()) {
+      std::cout << "op is call_tir" << std::endl;
       const GlobalVar& global_var = Downcast<GlobalVar>(call->args[0]);
       tir::PrimFunc func = Downcast<tir::PrimFunc>(mod_->Lookup(global_var));
 
@@ -199,9 +208,17 @@ class GraphCreator : public ExprVisitor {
       } else {
         pattern = OpPatternKind::kOpaque;
       }
+    } else {
+      std::cout << "op is not call_tir" << std::endl;
     }
     // The pattern of the current binding variable node is set to the pattern of this operator.
     SetNodePattern(binding_var_node, pattern);
+    const auto* gv_ptr = call->args[0].as<GlobalVarNode>();
+    if (!gv_ptr) {
+      std::cout << "call is external, skipped this binding." << std::endl;
+      return;
+    }
+
     // Visit all call args
     for (const Expr& arg : args) {
       ICHECK(IsLeafOrTuple(arg));
@@ -211,6 +228,7 @@ class GraphCreator : public ExprVisitor {
 
   void VisitTupleGetItem(const TupleGetItemNode* tuple_item,
                          IndexedForwardGraph::Node* binding_var_node) {
+    std::cout << "fuse_ops: visit tuple_get_item" << std::endl;
     ICHECK_NOTNULL(binding_var_node);
 
     SetNodePattern(binding_var_node, OpPatternKind::kInjective);
@@ -218,6 +236,7 @@ class GraphCreator : public ExprVisitor {
   }
 
   void VisitUnsupportedNode(const Expr& expr, IndexedForwardGraph::Node* binding_var_node) {
+    std::cout << "fuse_ops: visit unsupported node" << std::endl;
     ICHECK_NOTNULL(binding_var_node);
     SetNodePattern(binding_var_node, OpPatternKind::kOpaque);
 
@@ -233,6 +252,7 @@ class GraphCreator : public ExprVisitor {
 
   void VisitLeaf(const Expr& leaf_expr, IndexedForwardGraph::Node* binding_var_node,
                  const OpPatternKind& pattern) {
+    std::cout << "fuse_ops: visit leaf" << std::endl;
     ICHECK_NOTNULL(binding_var_node);
 
     // Recursive visit if it's Tuple
@@ -276,6 +296,7 @@ class GraphCreator : public ExprVisitor {
     ICHECK(graph_.node_map.find(key) == graph_.node_map.end())
         << "The node corresponding to the input key is not supposed to be created before";
     auto* node = arena_->make<IndexedForwardGraph::Node>();
+    std::cout << "[node_map] add node: " << node << std::endl;
     graph_.node_map[key] = node;
     return node;
   }
@@ -330,6 +351,7 @@ class GraphCreator : public ExprVisitor {
   void SetNodePattern(IndexedForwardGraph::Node* node, OpPatternKind pattern) {
     ICHECK(initialized_nodes_.find(node) == initialized_nodes_.end())
         << "The input node is supposed to be set pattern for only once";
+    std::cout << "[initialized_nodes_] add node: " << node << std::endl;
     initialized_nodes_.insert(node);
     node->pattern = pattern;
   }
