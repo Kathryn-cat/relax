@@ -249,6 +249,32 @@ def test_attention_offload_sd_2():
     print("original mod:")
     mod.show()
 
+    # ----- change the mod to packed version -----
+
+    patterns = [(entry.name, entry.pattern) for entry in get_patterns_with_prefix("cutlass")]
+    assert len(patterns) != 0, "Cannot find cutlass patterns"
+    print(f"number of cutlass patterns: {len(patterns)}")
+    for i, (name, pattern) in enumerate(patterns):
+        print(f"{i}: name: {name}\npattern: {pattern}\n")
+    print("--------------------------------")
+
+    print("after fused ops:")
+    mod = partition_for_cutlass(mod)
+    mod.show()
+
+    print("begin codegen:")
+    codegen_pass = relax.transform.RunCodegen({"cutlass": {"sm": 80, "find_first_valid": True}})
+    mod = codegen_pass(mod)
+
+    print(f"begin legalize ops:")
+    mod = LegalizeOps()(mod)
+
+    print(f"begin fusing ops:")
+    mod = FuseOps()(mod)
+
+    out = build_and_run(mod, [q, k, v], "cuda", legalize=True)
+    tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
+
 
 if __name__ == "__main__":
     # test_attention_offload()
