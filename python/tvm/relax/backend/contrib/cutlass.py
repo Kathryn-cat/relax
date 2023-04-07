@@ -268,6 +268,10 @@ def special_attention_patterns():
             "cutlass.special_attention_sd",
             *make_special_attention_pattern(),
         ),
+        (
+            "cutlass.special_attention_sd_cast",
+            *make_special_attention_pattern(with_cast=True),
+        ),
     ]
 
 
@@ -304,7 +308,7 @@ def partition_for_cutlass(mod, annotate_codegen=True):
     """
 
     patterns = get_patterns_with_prefix("cutlass")
-    assert len(patterns) == 3
+    assert len(patterns) == 4
     return transform.FuseOpsByPattern(
         patterns, bind_constants=False, annotate_codegen=annotate_codegen
     )(mod)

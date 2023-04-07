@@ -192,7 +192,7 @@ def make_attention_pattern(with_bias: bool = False):
     return out, annotations
 
 
-def make_special_attention_pattern():
+def make_special_attention_pattern(with_cast: bool = False):
     """
     Create pattern for fused multi head attention (dispatch to SD and LM).
 
@@ -228,7 +228,11 @@ def make_special_attention_pattern():
     # op 8-10
     score = is_op("relax.matmul")(query, key)
     score = is_op("relax.multiply")(score, is_const())
+    if with_cast:
+        score = is_op("relax.astype")(score)
     attn = is_op("relax.nn.softmax")(score)
+    if with_cast:
+        attn = is_op("relax.astype")(attn)
     # op 11-13
     out = is_op("relax.matmul")(attn, value)
     out = is_op("relax.reshape")(out, wildcard())
