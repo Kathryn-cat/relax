@@ -200,6 +200,57 @@ def test_attention_offload_sd():
     tvm.testing.assert_allclose(out, ref, rtol=1e-2, atol=1e-2)
 
 
+def get_relax_attention_module_sd_2(b, s, s_kv, n, h, h_v):
+    dtype = "float32"
+
+    from tvm.script.ir_builder import IRBuilder
+    from tvm.script.ir_builder import relax as relax_builder
+    from tvm.script.ir_builder import tir as T
+
+    scale = R.const((1 / np.sqrt(h)).astype(dtype))
+
+    with IRBuilder() as builder:
+        with relax_builder.function():
+            R.func_name("main")
+            q = R.arg("q", R.Tensor((b, s, n, h), dtype))
+            k = R.arg("k", R.Tensor((b, s_kv, n, h), dtype))
+            v = R.arg("v", R.Tensor((b, s_kv, n, h_v), dtype))
+            with R.dataflow() as frame:
+                qt = R.emit(R.permute_dims(q, axes=[0, 2, 1, 3]))
+                qt = R.emit(R.reshape(qt, (b * n, s, h)))
+                kt = R.emit(R.permute_dims(k, axes=[0, 2, 1, 3]))
+                kt = R.emit(R.reshape(kt, (b * n, s_kv, h)))
+                vt = R.emit(R.permute_dims(v, axes=[0, 2, 1, 3]))
+                vt = R.emit(R.reshape(vt, (b * n, s_kv, h_v)))
+                kt = R.emit(R.permute_dims(kt, axes=[0, 2, 1]))
+                score = R.emit(R.matmul(qt, kt, out_dtype=dtype))
+                score = R.emit(R.multiply(score, scale))
+                score = R.emit(R.astype(score, dtype=dtype))
+                attn = R.emit(R.nn.softmax(score, axis=-1))
+                attn = R.emit(R.astype(attn, dtype=dtype))
+                result = R.emit(R.matmul(attn, vt, out_dtype=dtype))
+                result = R.emit(R.reshape(result, (b, n, s, h_v)))
+                result = R.emit(R.permute_dims(result, axes=[0, 2, 1, 3]))
+                R.output(result)
+
+            R.func_ret_value(frame.output_vars[0])
+
+    func = builder.get()
+    return tvm.IRModule({"main": func})
+
+
+def test_attention_offload_sd_2():
+    b, (s, s_kv), n, (h, h_v) = 1, (4096, 4096), 1, (512, 512)
+    q, k, v, _, ref = get_numpy_attention_ref(
+        b, s, s_kv, n, h, h_v, "none", "none", "none", "float32"
+    )
+
+    mod = get_relax_attention_module_sd_2(b, s, s_kv, n, h, h_v)
+    print("original mod:")
+    mod.show()
+
+
 if __name__ == "__main__":
     # test_attention_offload()
-    test_attention_offload_sd()
+    # test_attention_offload_sd()
+    test_attention_offload_sd_2()
