@@ -17,9 +17,8 @@
 # pylint: disable=invalid-name, unused-argument, missing-function-docstring, abstract-method
 """Relax LazyTransformParams pass."""
 import tvm
-from tvm import IRModule
-from tvm import relax
-from tvm.relax.expr_functor import visitor, mutator, PyExprMutator, PyExprVisitor
+from tvm import IRModule, relax
+from tvm.relax.expr_functor import PyExprMutator, PyExprVisitor, mutator, visitor
 
 
 @visitor
@@ -173,7 +172,7 @@ class LazyTransformParamsMutator(PyExprMutator):
                     [relax.ObjectStructInfo()],
                 )
             )
-            self.set_var_remap(binding.var.vid, new_var)
+            self.set_var_remap(binding.var.vid, var_before_setitem)
         else:
             super().visit_var_binding_(binding)
         if binding.var in self.memory_free_insertion:
