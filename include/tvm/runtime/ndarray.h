@@ -200,6 +200,14 @@ class NDArray : public ObjectRef {
    * \return true if all conditions are satisfied.
    */
   TVM_DLL static bool AbilityOfZeroCopyForDLTensor(DLTensor* tensor, const Device& dev);
+  /*!
+   * \brief It allocates an empty array with the same size as the desired concatenate output, and
+   * copy the data from each NDArray to itself to perform the concatenation.
+   * \param arr The array of NDArrays to concatenate.
+   * \param axis The axis along which to concatenate.
+   * \return The concatenated output.
+   */
+  TVM_DLL static NDArray Concat(const std::vector<NDArray>& arr, int axis = 0);
   // internal namespace
   struct Internal;
 

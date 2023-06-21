@@ -301,6 +301,12 @@ bool NDArray::IsAligned(const DLTensor& tensor) {
           0);
 }
 
+NDArray NDArray::Concat(const std::vector<NDArray>& arr, int axis) {
+  // first, allocate the desired array (same as first element)
+  NDArray ret = NDArray::Empty(arr[0].Shape(), arr[0].DataType(), arr[0]->device);
+  return ret;
+}
+
 TVM_REGISTER_OBJECT_TYPE(NDArray::Container);
 
 }  // namespace runtime
