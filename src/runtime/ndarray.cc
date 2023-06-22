@@ -303,9 +303,16 @@ bool NDArray::IsAligned(const DLTensor& tensor) {
 
 NDArray NDArray::Concat(const std::vector<NDArray>& arr, int axis) {
   // first, allocate the desired array (same as first element)
-  NDArray ret = NDArray::Empty(arr[0].Shape(), arr[0].DataType(), arr[0]->device);
+  int batch_size = arr[0].Shape()[0];
+  int hidden_len = arr[0].Shape()[1] + arr[1].Shape()[1];
+  int output_len = arr[0].Shape()[2];
+  std::cout << "batch_size: " << batch_size << std::endl;
+  std::cout << "hidden_len: " << hidden_len << std::endl;
+  std::cout << "output_len: " << output_len << std::endl;
+  NDArray ret = NDArray::Empty(ShapeTuple({batch_size, hidden_len, output_len}), arr[0].DataType(),
+                               arr[0]->device);
   // second, copy the data from first array to the returned array
-  ret.CopyFrom(arr[0]);
+  // ret.CopyFrom(arr[0]);
   return ret;
 }
 
