@@ -304,6 +304,8 @@ bool NDArray::IsAligned(const DLTensor& tensor) {
 NDArray NDArray::Concat(const std::vector<NDArray>& arr, int axis) {
   // first, allocate the desired array (same as first element)
   NDArray ret = NDArray::Empty(arr[0].Shape(), arr[0].DataType(), arr[0]->device);
+  // second, copy the data from first array to the returned array
+  ret.CopyFrom(arr[0]);
   return ret;
 }
 
